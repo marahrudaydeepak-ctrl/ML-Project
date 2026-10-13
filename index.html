@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Credential Stuffing Detection | GBM + Isolation Forest</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef1f5;--card:#fff;--ink:#17202e;--mute:#667085;--line:#dde3ea;--navy:#14213d;--teal:#0f7b8a;--red:#c8372d;--amber:#d98a1f;--green:#2f8f5b}
+*{box-sizing:border-box}
+body{margin:0;font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--ink);display:flex;min-height:100vh}
+.side{width:230px;background:var(--navy);color:#dbe4f3;padding:22px 14px;position:sticky;top:0;height:100vh;flex-shrink:0}
+.brand{font-weight:600;font-size:19px;padding:0 10px 22px;color:#fff}.brand small{display:block;font-weight:400;font-size:12px;color:#8fa3c4;margin-top:3px}
+nav button{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;background:none;border:0;color:inherit;font:inherit;padding:11px 12px;border-radius:6px;cursor:pointer;margin-bottom:2px;border-left:3px solid transparent}
+nav button:hover{background:#1f305a}nav button.on{background:#1f305a;border-left-color:#4cc3d4;color:#fff}
+.badge{background:var(--red);color:#fff;font-size:11px;border-radius:10px;padding:1px 7px}
+main{flex:1;padding:28px 32px;min-width:0;max-width:1200px}
+.page{display:none}.page.on{display:block}
+h1{margin:0 0 16px;font-size:26px;font-weight:600}h3{margin:0 0 12px;font-size:15px;font-weight:600}
+.lead{color:var(--mute);margin:-6px 0 16px;max-width:70ch}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:18px;margin-bottom:16px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--teal);border-radius:8px;padding:14px 16px}
+.kpi b{display:block;font-size:28px;font-weight:600}.kpi span{color:var(--mute);font-size:13px}.kpi.r{border-left-color:var(--red)}.kpi.a{border-left-color:var(--amber)}
+.bar{display:flex;gap:10px;margin-bottom:12px}
+input,select{font:inherit;padding:9px 11px;border:1px solid var(--line);border-radius:6px;background:#fff}#q{flex:1;max-width:340px}
+.scroll{overflow:auto;max-height:70vh;padding:0}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{position:sticky;top:0;background:#f7f9fb;font-weight:600}
+.pill{padding:2px 9px;border-radius:10px;font-size:12px;font-weight:500}.p-r{background:#fbe4e2;color:var(--red)}.p-a{background:#fcefd6;color:#9a5f08}.p-g{background:#dff2e7;color:var(--green)}
+label{display:block;margin-bottom:14px;font-size:14px}label b{float:right;color:var(--teal)}
+input[type=range]{width:100%;padding:0;margin-top:6px;accent-color:var(--teal)}.chk{display:flex;gap:8px;align-items:center}.chk input{width:auto}
+.btn{background:var(--teal);color:#fff;border:0;border-radius:6px;padding:10px 18px;font:inherit;font-weight:500;cursor:pointer;margin-right:8px}.btn:hover{background:#0b6572}.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.btn:focus-visible,nav button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #4cc3d4;outline-offset:2px}
+pre{margin:0;background:#101a2e;color:#b9ffd0;padding:12px;border-radius:6px;height:230px;overflow:auto;font-size:12.5px;line-height:1.5}
+.muted{color:var(--mute)}.note{color:var(--mute);font-size:13px}
+.meter{height:12px;background:#e6ebf1;border-radius:6px;overflow:hidden;margin:4px 0 14px}.meter i{display:block;height:100%;border-radius:6px;transition:width .5s}
+.verdict{font-size:22px;font-weight:600;margin-bottom:14px}
+.alert{display:flex;gap:14px;align-items:center;background:var(--card);border:1px solid var(--line);border-left:5px solid var(--amber);border-radius:8px;padding:14px 16px;margin-bottom:10px}
+.alert.c{border-left-color:var(--red)}.alert.x{opacity:.55}.alert div{flex:1}.alert small{color:var(--mute);display:block;margin-top:2px}
+.cm{display:grid;grid-template-columns:90px 1fr 1fr;gap:6px;text-align:center;max-width:380px}.cm div{padding:16px 6px;border-radius:6px;background:#eef3f7}.cm .h{background:none;padding:6px;color:var(--mute);font-size:13px}.cm .g{background:#dff2e7}.cm .b{background:#fbe4e2}
+.prose p{line-height:1.65;max-width:75ch}.prose h3{margin-top:20px}.prose h3:first-child{margin-top:0;font-size:18px}
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:18px 0}.flow span{background:#e8f3f5;border:1px solid #bddde2;padding:8px 12px;border-radius:6px;font-size:14px}.flow i{width:18px;height:2px;background:var(--teal)}
+code{background:#eef1f5;padding:1px 6px;border-radius:4px}
+@media(max-width:800px){body{flex-direction:column}.side{width:100%;height:auto;position:static;padding:12px}nav{display:flex;overflow-x:auto;gap:4px}nav button{white-space:nowrap;width:auto}.brand{padding-bottom:10px}main{padding:18px}}
+
+
+[hidden]{display:none!important}
+.login{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:24px;overflow:auto;background:#04100f;color:#cfe3e1}
+body.authed .login{display:none}
+body:not(.authed) .side,body:not(.authed) main{display:none}
+.scene{position:absolute;inset:0;background:radial-gradient(circle at 15% 25%,rgba(25,181,165,.28),transparent 42%),radial-gradient(circle at 88% 28%,rgba(90,230,130,.2),transparent 36%),linear-gradient(#03100f,#062321 62%,#020a0a)}
+.lamp{position:absolute;width:9px;height:9px;border-radius:50%;background:#c9ffd9;box-shadow:0 0 40px 20px rgba(110,255,160,.35)}
+.l1{left:12%;top:14%}.l2{right:10%;top:20%;box-shadow:0 0 50px 24px rgba(60,220,210,.35);background:#c9fffb}.l3{right:30%;top:48%;width:6px;height:6px}
+.road{position:absolute;left:0;right:0;bottom:0;height:34%;background:linear-gradient(transparent,rgba(30,140,130,.14) 40%,rgba(0,0,0,.6))}
+.l-wrap{position:relative;display:flex;width:100%;max-width:920px;background:rgba(4,20,22,.82);backdrop-filter:blur(6px);border:1px solid #17403f;border-radius:6px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.l-info{flex:1.1;padding:44px}.l-box{flex:1;padding:44px;border-left:1px solid #17403f}
+.logo{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:500;color:#fff;margin-bottom:56px}.logo svg{width:26px;height:26px;color:#19b5a5}
+.l-info h2{margin:0 0 14px;font-size:32px;font-weight:400;color:#19b5a5;line-height:1.2}
+.l-info p{margin:0 0 28px;line-height:1.65;color:#b2cbc9;font-size:14.5px;max-width:42ch}
+.icons{display:flex;gap:14px}.icons span{width:54px;height:54px;border:1px solid #5f9a96;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#d3ece9}.icons svg{width:26px;height:26px}
+.l-box h1{margin:0 0 22px;font-size:24px;color:#fff}
+.l-box label{color:#b2cbc9}.l-box input{width:100%;margin-top:6px}
+.btn.wide{width:100%;margin:6px 0 14px}.lerr{color:#ff8f86;font-size:14px;min-height:20px;margin-bottom:6px}
+.alt{font-size:14px;color:#8fb0ae;margin:0}.alt a{color:#2fd3c2}
+.login footer{position:absolute;left:24px;right:24px;bottom:14px;font-size:11.5px;color:#6b8c8a}
+.out{position:absolute;bottom:22px;left:14px;right:14px;background:none;border:1px solid #1f5560;color:#c4dedd;border-radius:6px;padding:9px;font:inherit;cursor:pointer}.out:hover{background:#123238}
+.who{position:absolute;bottom:68px;left:24px;right:14px;font-size:13px;color:#8fb5b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* dark teal theme for the whole app */
+:root{--bg:#07161a;--card:#0d2227;--ink:#e3f1f1;--mute:#8aa8aa;--line:#1b3a40;--navy:#061a1e;--teal:#19b5a5}
+.side{border-right:1px solid #12313a}nav button:hover,nav button.on{background:#123238}
+th{background:#10292f}input,select{background:#0a1c20;color:var(--ink);border-color:#1f4650}
+.btn{background:#12998c}.btn:hover{background:#0e8579}.btn.ghost{background:transparent;color:var(--ink);border-color:#1f4650}
+.meter{background:#16343a}.cm div{background:#10292f}.cm .g{background:#0f3a2e}.cm .b{background:#3e1f1f}.cm .h{background:none}
+.flow span{background:#0f2d33;border-color:#1f5560}code{background:#12303a;color:#9fe8de}
+.p-r{background:#4a1f1d;color:#ff9a92}.p-a{background:#4a3513;color:#f3c374}.p-g{background:#12392a;color:#7fe0a6}
+@media(max-width:800px){.l-wrap{flex-direction:column}.l-box{border-left:0;border-top:1px solid #17403f}.l-info,.l-box{padding:28px}.logo{margin-bottom:24px}.out{position:static;margin-top:8px;width:auto}.who{position:static;margin:10px 0 0}}
+
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+<section class="login" id="login">
+  <div class="scene"><i class="lamp l1"></i><i class="lamp l2"></i><i class="lamp l3"></i><div class="road"></div></div>
+  <div class="l-wrap">
+    <div class="l-info">
+      <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z"/></svg>Stuffing Watch</div>
+      <h2>Credential stuffing, caught early</h2>
+      <p>Score every login with a Gradient Boosting Machine and an Isolation Forest, then review alerts and block bot IPs from one dashboard.</p>
+      <div class="icons"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z"/></svg></span><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="11" width="12" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg></span><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg></span></div>
+    </div>
+    <div class="l-box">
+      <h1 id="ltitle">Sign in</h1>
+      <label id="nameRow" hidden>Full name<input id="ln" autocomplete="name"></label>
+      <label>Email or username<input id="lu" autocomplete="username"></label>
+      <label>Password<input id="lp" type="password" autocomplete="current-password"></label>
+      <label id="cRow" hidden>Confirm password<input id="lc" type="password" autocomplete="new-password"></label>
+      <div id="lerr" class="lerr"></div>
+      <button class="btn wide" id="lgo">Sign in</button>
+      <p class="alt"><span id="ltxt">New here?</span> <a href="#" id="lsw">Create an account</a></p>
+    </div>
+  </div>
+  <footer>Version 1.0 | Credential stuffing detection project | Accounts are stored in this browser only</footer>
+</section>
+<aside class="side">
+  <div class="brand">Stuffing Watch<small>GBM + Isolation Forest</small></div>
+  <nav id="nav">
+    <button data-page="dashboard" class="on">Dashboard</button>
+    <button data-page="logins">Login Analysis</button>
+    <button data-page="sim">Attack Simulation</button>
+    <button data-page="predict">ML Prediction</button>
+    <button data-page="analytics">Analytics</button>
+    <button data-page="alerts">Alerts <span id="badge" class="badge">0</span></button>
+    <button data-page="about">About Project</button>
+  </nav>
+  <div class="who" id="who"></div>
+  <button class="out" id="logout">Sign out</button>
+</aside>
+<main>
+<section id="p-dashboard" class="page on">
+  <h1>Dashboard</h1>
+  <div class="kpis" id="kpis"></div>
+  <div class="grid2">
+    <div class="card"><h3>Login attempts by hour</h3><canvas id="cHour"></canvas></div>
+    <div class="card"><h3>Traffic classified by the hybrid model</h3><canvas id="cSplit"></canvas></div>
+  </div>
+</section>
+
+<section id="p-logins" class="page">
+  <h1>Login Analysis</h1>
+  <div class="bar">
+    <input id="q" placeholder="Search IP, user or country">
+    <select id="flt"><option value="all">All attempts</option><option value="flagged">Flagged only</option><option value="failed">Failed only</option></select>
+  </div>
+  <div class="card scroll"><table id="tbl"><thead><tr><th>Time</th><th>IP address</th><th>User</th><th>Country</th><th>Status</th><th>Attempts/min</th><th>Users tried</th><th>Risk</th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<section id="p-sim" class="page">
+  <h1>Attack Simulation</h1>
+  <p class="lead">Replay a credential stuffing run against the detector. Bots try leaked username and password pairs; the models score every attempt.</p>
+  <div class="grid2">
+    <div class="card">
+      <h3>Attack settings</h3>
+      <label>Bot IPs <b id="vB">40</b><input type="range" id="sB" min="5" max="150" value="40"></label>
+      <label>Attempts per minute per bot <b id="vR">60</b><input type="range" id="sR" min="5" max="150" value="60"></label>
+      <label>Proxy rotation <b id="vP">70%</b><input type="range" id="sP" min="0" max="100" value="70"></label>
+      <button class="btn" id="run">Run attack</button>
+      <button class="btn ghost" id="reset">Reset data</button>
+    </div>
+    <div class="card"><h3>Live detection log</h3><pre id="log">Waiting for a simulation run.</pre></div>
+  </div>
+  <div class="card"><h3>Detection result</h3><div id="simRes" class="muted">No run yet.</div></div>
+</section>
+
+<section id="p-predict" class="page">
+  <h1>ML Prediction</h1>
+  <p class="lead">Enter the traffic features for one IP over a 5-minute window and score it with each model.</p>
+  <div class="grid2">
+    <div class="card">
+      <h3>Traffic features</h3>
+      <label>Login attempts per minute <b id="fv1">20</b><input type="range" id="f1" min="0" max="150" value="20"></label>
+      <label>Distinct usernames tried <b id="fv2">5</b><input type="range" id="f2" min="1" max="80" value="5"></label>
+      <label>Failed-login ratio <b id="fv3">0.40</b><input type="range" id="f3" min="0" max="100" value="40"></label>
+      <label>Timing regularity (1 = machine-like) <b id="fv4">0.30</b><input type="range" id="f4" min="0" max="100" value="30"></label>
+      <label class="chk"><input type="checkbox" id="f5"> Known proxy or datacenter IP</label>
+      <label class="chk"><input type="checkbox" id="f6"> New device for these accounts</label>
+      <div class="row"><button class="btn" id="pred">Predict</button><button class="btn ghost" id="preset">Load attack sample</button></div>
+    </div>
+    <div class="card" id="predOut"><h3>Result</h3><div class="muted">Press Predict to score this traffic.</div></div>
+  </div>
+</section>
+
+<section id="p-analytics" class="page">
+  <h1>Analytics</h1>
+  <div class="grid2">
+    <div class="card"><h3>Model comparison (sample test results)</h3><canvas id="cCmp"></canvas></div>
+    <div class="card"><h3>GBM feature importance</h3><canvas id="cImp"></canvas></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Confusion matrix (hybrid, sample)</h3><div id="cm"></div></div>
+    <div class="card"><h3>Top attacking countries (current data)</h3><canvas id="cCty"></canvas></div>
+  </div>
+  <p class="note">Comparison, importance and confusion-matrix figures are sample values for the demo. Replace them with your own results from training (see README).</p>
+</section>
+
+<section id="p-alerts" class="page">
+  <h1>Alerts</h1>
+  <div id="alerts"></div>
+</section>
+
+<section id="p-about" class="page">
+  <h1>About Project</h1>
+  <div class="card prose">
+    <h3>Credential Stuffing Attack Detection Using Gradient Boosting Machine and Isolation Forest</h3>
+    <p>Credential stuffing is an attack where bots replay username and password pairs leaked from other breaches against a login page, hoping users reused them. Because each attempt uses real credentials, simple rate limits and password rules miss much of it.</p>
+    <p>This project scores login traffic with two models. <b>Isolation Forest</b> learns what normal logins look like without labels and flags outliers, which helps with new attack patterns. <b>Gradient Boosting</b> is trained on labeled attack and benign traffic and is more accurate on known patterns. The <b>hybrid</b> score combines both.</p>
+    <div class="flow"><span>Login logs</span><i></i><span>Feature engineering</span><i></i><span>Isolation Forest</span><i></i><span>GBM</span><i></i><span>Hybrid risk score</span><i></i><span>Alert or block</span></div>
+    <h3>Features used</h3>
+    <p>Attempts per minute, distinct usernames per IP, failed-login ratio, timing regularity, proxy or datacenter IP, and new-device flag.</p>
+    <h3>About this demo</h3>
+    <p>This site runs entirely in your browser. Its scores come from a small formula that imitates the two models so you can explore the interface. To use your own trained models, connect the <code>predict()</code> function in <code>app.js</code> to an API, as described in the README.</p>
+  </div>
+</section>
+</main>
+<script>
+/* Stuffing Watch: runs fully in the browser.
+   predict() imitates a GBM + Isolation Forest pipeline. Replace its body with a fetch() to your API for real models. */
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const R=(a,b)=>a+Math.random()*(b-a),pick=a=>a[Math.floor(Math.random()*a.length)],sig=x=>1/(1+Math.exp(-x));
+const CT=['India','USA','Brazil','Russia','Germany','UK','Vietnam','Nigeria','Indonesia','France'],ATK=['Russia','Vietnam','Brazil','Indonesia','Nigeria'];
+Chart.defaults.color='#9ec3c6';Chart.defaults.borderColor='#1b3a40';
+let events=[],alerts=[],charts={},clock=0;
+
+function predict(f){ // f: rate, distinct, failed(0-1), regular(0-1), proxy, newdev
+  const z=1.6*Math.min(f.rate/50,1)+1.4*Math.min(f.distinct/25,1)+1.8*f.failed+f.regular+.8*f.proxy+.5*f.newdev-2.6;
+  const gbm=sig(2.2*z),iso=sig(1.6*(z+.3));
+  return{gbm,iso,hybrid:.6*gbm+.4*iso};
+}
+const ip=()=>[pick([45,91,103,185,194,23,152]),~~R(1,255),~~R(1,255),~~R(1,255)].join('.');
+function gen(attack,hour,o={}){
+  const f=attack?{rate:o.rate??R(30,120),distinct:R(8,60),failed:R(.8,1),regular:R(.7,1),proxy:Math.random()<(o.proxy??.7)?1:0,newdev:1}
+               :{rate:R(1,6),distinct:R(1,2),failed:R(0,.25),regular:R(0,.4),proxy:Math.random()<.05?1:0,newdev:Math.random()<.1?1:0};
+  const s=predict(f);
+  return{id:++clock,hour,ip:ip(),user:attack?'user'+~~R(1000,9999):pick(['alice','bob','carol','dave','erin','frank'])+~~R(1,99),
+    country:attack?pick(ATK):pick(CT),status:Math.random()<f.failed?'Failed':'Success',...f,...s,attack,flagged:s.hybrid>.5};
+}
+function seed(){
+  events=[];alerts=[];clock=0;
+  for(let i=0;i<320;i++)events.push(gen(false,~~R(0,24)));
+  for(let i=0;i<45;i++)events.push(gen(true,pick([2,3,4,14,15,16])));
+  events.forEach(raise);events.sort((a,b)=>a.hour-b.hour);renderAll();
+}
+function raise(e){
+  if(!e.flagged||alerts.some(a=>a.ip===e.ip))return;
+  const sev=e.hybrid>.85?'Critical':e.hybrid>.7?'High':'Medium';
+  alerts.push({ip:e.ip,country:e.country,score:e.hybrid,sev,rate:e.rate,distinct:e.distinct,hour:e.hour,blocked:false});
+}
+const pct=x=>(x*100).toFixed(0)+'%',hh=h=>String(h).padStart(2,'0')+':00';
+const pill=s=>`<span class="pill ${s>.7?'p-r':s>.5?'p-a':'p-g'}">${pct(s)}</span>`;
+
+/* navigation */
+$('#nav').onclick=e=>{const b=e.target.closest('button');if(!b)return;
+  $$('#nav button').forEach(x=>x.classList.toggle('on',x===b));
+  $$('.page').forEach(p=>p.classList.toggle('on',p.id==='p-'+b.dataset.page));renderAll();};
+
+/* charts */
+function chart(id,cfg){charts[id]?.destroy();charts[id]=new Chart($('#'+id),cfg);}
+function renderDash(){
+  const n=events.length,fl=events.filter(e=>e.flagged).length,fail=events.filter(e=>e.status==='Failed').length,blk=alerts.filter(a=>a.blocked).length;
+  $('#kpis').innerHTML=`<div class="kpi"><b>${n}</b><span>Login attempts</span></div><div class="kpi a"><b>${pct(fail/n)}</b><span>Failed logins</span></div>
+   <div class="kpi r"><b>${fl}</b><span>Flagged as attack</span></div><div class="kpi"><b>${alerts.length}</b><span>Suspicious IPs</span></div><div class="kpi"><b>${blk}</b><span>IPs blocked</span></div>`;
+  const hrs=[...Array(24).keys()],nm=hrs.map(h=>events.filter(e=>e.hour===h&&!e.flagged).length),at=hrs.map(h=>events.filter(e=>e.hour===h&&e.flagged).length);
+  chart('cHour',{type:'bar',data:{labels:hrs.map(hh),datasets:[{label:'Normal',data:nm,backgroundColor:'#0f7b8a'},{label:'Flagged',data:at,backgroundColor:'#c8372d'}]},options:{scales:{x:{stacked:true,ticks:{maxTicksLimit:8}},y:{stacked:true}}}});
+  chart('cSplit',{type:'doughnut',data:{labels:['Normal','Flagged'],datasets:[{data:[n-fl,fl],backgroundColor:['#0f7b8a','#c8372d']}]},options:{cutout:'62%'}});
+  $('#badge').textContent=alerts.filter(a=>!a.blocked).length;
+}
+function renderTable(){
+  const q=$('#q').value.toLowerCase(),f=$('#flt').value;
+  const rows=events.filter(e=>(f==='all'||(f==='flagged'&&e.flagged)||(f==='failed'&&e.status==='Failed'))&&(e.ip+e.user+e.country).toLowerCase().includes(q)).slice(-300).reverse();
+  $('#tbl tbody').innerHTML=rows.map(e=>`<tr><td>${hh(e.hour)}</td><td>${e.ip}</td><td>${e.user}</td><td>${e.country}</td><td>${e.status}</td><td>${e.rate.toFixed(0)}</td><td>${e.distinct.toFixed(0)}</td><td>${pill(e.hybrid)}</td></tr>`).join('')||'<tr><td colspan="8">No attempts match this filter.</td></tr>';
+}
+function renderAlerts(){
+  const list=[...alerts].sort((a,b)=>b.score-a.score);
+  $('#alerts').innerHTML=list.length?list.map(a=>`<div class="alert ${a.sev==='Critical'?'c':''} ${a.blocked?'x':''}">
+   <div><b>${a.ip}</b> (${a.country}) <span class="pill ${a.sev==='Critical'?'p-r':'p-a'}">${a.sev}</span>
+   <small>Risk ${pct(a.score)}. ${a.rate.toFixed(0)} attempts per minute across ${a.distinct.toFixed(0)} usernames around ${hh(a.hour)}.</small></div>
+   <button class="btn ${a.blocked?'ghost':''}" data-ip="${a.ip}">${a.blocked?'Unblock IP':'Block IP'}</button></div>`).join(''):'<div class="card muted">No alerts. Run an attack simulation to generate some.</div>';
+}
+$('#alerts').onclick=e=>{const b=e.target.closest('button');if(!b)return;const a=alerts.find(x=>x.ip===b.dataset.ip);a.blocked=!a.blocked;renderAll();};
+function renderAnalytics(){
+  chart('cCmp',{type:'bar',data:{labels:['Precision','Recall','F1-score','ROC-AUC'],datasets:[
+    {label:'Isolation Forest',data:[.81,.88,.84,.92],backgroundColor:'#d98a1f'},{label:'GBM',data:[.95,.93,.94,.98],backgroundColor:'#0f7b8a'},{label:'Hybrid',data:[.97,.96,.965,.99],backgroundColor:'#7fe0d4'}]},options:{scales:{y:{min:.7,max:1}}}});
+  chart('cImp',{type:'bar',data:{labels:['Distinct usernames','Attempts per minute','Failed ratio','Timing regularity','Isolation score','Proxy IP','New device'],datasets:[{data:[.24,.21,.18,.14,.12,.07,.04],backgroundColor:'#0f7b8a'}]},options:{indexAxis:'y',plugins:{legend:{display:false}}}});
+  $('#cm').innerHTML='<div class="cm"><div class="h"></div><div class="h">Predicted normal</div><div class="h">Predicted attack</div><div class="h">Actual normal</div><div class="g">9,812</div><div class="b">38</div><div class="h">Actual attack</div><div class="b">21</div><div class="g">529</div></div>';
+  const c={};events.filter(e=>e.flagged).forEach(e=>c[e.country]=(c[e.country]||0)+1);const k=Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  chart('cCty',{type:'bar',data:{labels:k.map(x=>x[0]),datasets:[{data:k.map(x=>x[1]),backgroundColor:'#c8372d'}]},options:{plugins:{legend:{display:false}}}});
+}
+function renderAll(){
+  const on=$('.page.on').id.slice(2);
+  ({dashboard:renderDash,logins:renderTable,alerts:renderAlerts,analytics:renderAnalytics}[on]||(()=>{}))();
+  $('#badge').textContent=alerts.filter(a=>!a.blocked).length;
+}
+$('#q').oninput=renderTable;$('#flt').onchange=renderTable;
+
+/* attack simulation */
+[['sB','vB',''],['sR','vR',''],['sP','vP','%']].forEach(([s,v,u])=>$('#'+s).oninput=()=>$('#'+v).textContent=$('#'+s).value+u);
+$('#run').onclick=async()=>{
+  const bots=+$('#sB').value,rate=+$('#sR').value,prox=+$('#sP').value/100,log=$('#log'),btn=$('#run');
+  btn.disabled=true;log.textContent='';const batch=[];const hour=~~R(0,24);
+  for(let i=0;i<bots;i++){
+    const e=gen(true,hour,{rate:rate*R(.7,1.3),proxy:prox});if(rate<25){e.rate=rate;Object.assign(e,predict(e));e.flagged=e.hybrid>.5;}
+    batch.push(e);if(i%3===0){
+      log.textContent+=`${e.ip.padEnd(16)} ${e.rate.toFixed(0).padStart(3)}/min  risk ${pct(e.hybrid)}  ${e.flagged?'FLAGGED':'passed'}\n`;log.scrollTop=1e9;await new Promise(r=>setTimeout(r,35));}
+  }
+  events.push(...batch);batch.forEach(raise);events.sort((a,b)=>a.hour-b.hour);
+  const caught=batch.filter(e=>e.flagged).length;
+  $('#simRes').innerHTML=`<b>${caught} of ${bots}</b> bot IPs were flagged (${pct(caught/bots)} detection rate). ${bots-caught} slipped under the threshold${bots-caught?', usually the slow, low-rate bots. Lower the rate slider to see this effect.':'.'}
+   <br>Open <b>Alerts</b> to review and block them.`;
+  btn.disabled=false;renderAll();
+};
+$('#reset').onclick=()=>{seed();$('#log').textContent='Data reset.';$('#simRes').textContent='No run yet.';};
+
+/* ML prediction */
+const fm={f1:['fv1',1],f2:['fv2',1],f3:['fv3',.01],f4:['fv4',.01]};
+Object.entries(fm).forEach(([id,[v,k]])=>$('#'+id).oninput=()=>$('#'+v).textContent=k===1?$('#'+id).value:($('#'+id).value*k).toFixed(2));
+function setSlider(id,val){$('#'+id).value=val;$('#'+id).oninput();}
+$('#preset').onclick=()=>{setSlider('f1',85);setSlider('f2',40);setSlider('f3',92);setSlider('f4',88);$('#f5').checked=true;$('#f6').checked=true;$('#pred').click();};
+$('#pred').onclick=()=>{
+  const s=predict({rate:+$('#f1').value,distinct:+$('#f2').value,failed:$('#f3').value/100,regular:$('#f4').value/100,proxy:+$('#f5').checked,newdev:+$('#f6').checked});
+  const col=x=>x>.7?'#c8372d':x>.5?'#d98a1f':'#2f8f5b',m=(n,x)=>`${n} <b style="float:right">${pct(x)}</b><div class="meter"><i style="width:${x*100}%;background:${col(x)}"></i></div>`;
+  const v=s.hybrid>.7?'Credential stuffing likely':s.hybrid>.5?'Suspicious, review needed':'Looks like normal traffic';
+  $('#predOut').innerHTML=`<h3>Result</h3><div class="verdict" style="color:${col(s.hybrid)}">${v}</div>${m('Isolation Forest anomaly score',s.iso)}${m('GBM attack probability',s.gbm)}${m('Hybrid risk score',s.hybrid)}<span class="muted">Threshold for flagging: 50%.</span>`;
+};
+seed();
+
+/* accounts (stored in this browser) and login gate */
+const mem={},store={get(k){try{return localStorage.getItem(k)}catch(e){return mem[k]??null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){mem[k]=v}}};
+const users=()=>{try{return JSON.parse(store.get('sw_users')||'{}')}catch(e){return{}}};
+async function hash(s){try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('sw:'+s));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){return btoa(unescape(encodeURIComponent('sw:'+s)))}}
+let mode='in';const err=m=>$('#lerr').textContent=m;
+function setMode(m){mode=m;const r=m==='reg';$('#nameRow').hidden=!r;$('#cRow').hidden=!r;err('');
+  $('#ltitle').textContent=r?'Create your account':'Sign in';$('#lgo').textContent=r?'Create account':'Sign in';
+  $('#ltxt').textContent=r?'Already have an account?':'New here?';$('#lsw').textContent=r?'Sign in':'Create an account';}
+function enter(name){document.body.classList.add('authed');$('#who').textContent='Signed in as '+name;
+  $$('#nav button').forEach(x=>x.classList.toggle('on',x.dataset.page==='dashboard'));
+  $$('.page').forEach(p=>p.classList.toggle('on',p.id==='p-dashboard'));renderAll();}
+function start(id,name){err('');try{sessionStorage.setItem('sw_user',id)}catch(e){}enter(name);}
+async function submit(){
+  const id=$('#lu').value.trim().toLowerCase(),pw=$('#lp').value,us=users();
+  if(!id||!pw)return err('Enter your email or username and your password.');
+  if(mode==='reg'){
+    const name=$('#ln').value.trim();
+    if(!name)return err('Enter your full name.');
+    if(pw.length<6)return err('Choose a password with at least 6 characters.');
+    if(pw!==$('#lc').value)return err('The passwords do not match.');
+    if(us[id])return err('This email or username already has an account. Sign in instead.');
+    us[id]={name,h:await hash(pw)};store.set('sw_users',JSON.stringify(us));start(id,name);
+  }else{
+    const u=us[id];
+    if(!u||u.h!==await hash(pw))return err('Incorrect email/username or password.');
+    start(id,u.name);
+  }
+}
+$('#lgo').onclick=submit;
+$('#lsw').onclick=e=>{e.preventDefault();setMode(mode==='in'?'reg':'in');};
+['ln','lu','lp','lc'].forEach(i=>$('#'+i).addEventListener('keydown',e=>{if(e.key==='Enter')submit();}));
+$('#logout').onclick=()=>{try{sessionStorage.removeItem('sw_user')}catch(e){}document.body.classList.remove('authed');
+  ['lp','lc'].forEach(i=>$('#'+i).value='');setMode(Object.keys(users()).length?'in':'reg');};
+setMode(Object.keys(users()).length?'in':'reg');
+try{const s=sessionStorage.getItem('sw_user'),u=s&&users()[s];if(u)enter(u.name);}catch(e){}
+
+</script>
+</body>
+</html>
